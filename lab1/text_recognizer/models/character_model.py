@@ -21,7 +21,10 @@ class CharacterModel(Model):
             image = (image / 255).astype(np.float32)
         # NOTE: integer to character mapping dictionary is self.data.mapping[integer]
         ##### Your code below (Lab 1)
-
+        output = self.network.predict(np.array([image]))
+        clas = np.argmax(output[0, :])
+        predicted_character = self.data.mapping[clas]
+        confidence_of_prediction = output[0, clas]
         ##### Your code above (Lab 1)
         return predicted_character, confidence_of_prediction
 
