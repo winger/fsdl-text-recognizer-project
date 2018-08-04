@@ -48,7 +48,7 @@ def line_lstm_ctc(input_shape, output_shape, window_width=28, window_stride=14):
     convnet = lenet((image_height, window_width, 1), (num_classes,))
     convnet = KerasModel(inputs=convnet.inputs, outputs=convnet.layers[-2].output)
     convnet_outputs = TimeDistributed(convnet)(image_patches)
-    # convnet_outputs = Dropout(0.5)(convnet_outputs)
+    convnet_outputs = Dropout(0.2)(convnet_outputs)
     # (num_windows, 128)
 
     lstm_output = Bidirectional(lstm_fn(256, return_sequences=True))(convnet_outputs)
