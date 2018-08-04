@@ -26,7 +26,7 @@ def line_lstm_ctc(input_shape, output_shape, window_width=28, window_stride=14):
     label_length = Input(shape=(1,), name='label_length')
 
     gpu_present = len(device_lib.list_local_devices()) > 1
-    lstm_fn = CuDNNGRU if gpu_present else GRU
+    lstm_fn = CuDNNLSTM if gpu_present else LSTM
 
     # Your code should use slide_window and extract image patches from image_input.
     # Pass a convolutional model over each image patch to generate a feature vector per window.
@@ -51,7 +51,7 @@ def line_lstm_ctc(input_shape, output_shape, window_width=28, window_stride=14):
     # convnet_outputs = Dropout(0.5)(convnet_outputs)
     # (num_windows, 128)
 
-    lstm_output = lstm_fn(256, return_sequences=True)(convnet_outputs)
+    lstm_output = Bidirectional(lstm_fn(256, return_sequences=True))(convnet_outputs)
     # lstm_output = Dropout(0.5)(lstm_output)
 
     softmax_output = Dense(num_classes, activation='softmax', name='softmax_output')(lstm_output)
