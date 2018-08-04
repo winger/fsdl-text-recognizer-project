@@ -2,7 +2,7 @@ from boltons.cacheutils import cachedproperty
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.python.client import device_lib
-from tensorflow.keras.layers import Conv2D, Dense, Dropout, Flatten, Input, MaxPooling2D, Permute, RepeatVector, Reshape, TimeDistributed, Lambda, LSTM, GRU, CuDNNLSTM, Bidirectional
+from tensorflow.keras.layers import Add, Activation, BatchNormalization, Concatenate, Conv1D, Conv2D, Dense, Dropout, Flatten, Input, MaxPooling2D, Permute, RepeatVector, Reshape, TimeDistributed, Lambda, LSTM, GRU, CuDNNLSTM, Bidirectional
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.models import Model as KerasModel
 
@@ -50,8 +50,8 @@ def line_lstm_ctc(input_shape, output_shape, window_width=28, window_stride=14):
     convnet_outputs = TimeDistributed(convnet)(image_patches)
     # (num_windows, 128)
 
-    lstm_output = lstm_fn(128, return_sequences=True)(convnet_outputs)
-    # (num_windows, 128)
+    lstm_output = lstm_fn(256, return_sequences=True)(convnet_outputs)
+    # lstm_output = Dropout(0.5)(lstm_output)
 
     softmax_output = Dense(num_classes, activation='softmax', name='softmax_output')(lstm_output)
     # (num_windows, num_classes)
@@ -77,4 +77,3 @@ def line_lstm_ctc(input_shape, output_shape, window_width=28, window_stride=14):
         outputs=[ctc_loss_output, ctc_decoded_output]
     )
     return model
-
