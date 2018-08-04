@@ -10,7 +10,7 @@ from text_recognizer.models.base import Model
 from training.gpu_util_sampler import GPUUtilizationSampler
 
 
-EARLY_STOPPING = True
+EARLY_STOPPING = False
 GPU_UTIL_SAMPLER = True
 
 
@@ -37,4 +37,3 @@ def train_model(model: Model, dataset: Dataset, epochs: int, batch_size: int, gp
         print(f'GPU utilization: {round(np.mean(gpu_utilizations), 2)} +- {round(np.std(gpu_utilizations), 2)}')
 
     return model
-
