@@ -60,7 +60,7 @@ class Model:
         return 'categorical_crossentropy'
 
     def optimizer(self):
-        return Adam(3e-4)
+        return RMSprop(lr=0.003)
 
     def metrics(self):
         return ['accuracy']

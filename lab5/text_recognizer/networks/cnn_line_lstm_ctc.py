@@ -62,9 +62,10 @@ def cnn_line_lstm_ctc(input_shape, output_shape, **kwargs):
 
     # (num_windows, 128)
 
-    for i in range(5):
-        convnet_outputs = Dropout(0.5)(convnet_outputs)
-        lstm_output = Bidirectional(lstm_fn(256, return_sequences=True))(convnet_outputs)
+    lstm_output = convnet_outputs
+    for i in range(2):
+        lstm_output = Dropout(0.5)(lstm_output)
+        lstm_output = Bidirectional(lstm_fn(256, return_sequences=True))(lstm_output)
     lstm_output = Dropout(0.5)(lstm_output)
 
     softmax_output = Dense(num_classes, activation='softmax', name='softmax_output')(lstm_output)

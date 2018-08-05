@@ -160,4 +160,3 @@ if __name__ == '__main__':
     print(data)
     print(data.x_train.shape, data.y_train.shape)
     print(data.x_test.shape, data.y_test.shape)
-

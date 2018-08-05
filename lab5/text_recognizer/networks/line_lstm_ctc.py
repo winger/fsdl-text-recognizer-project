@@ -2,23 +2,19 @@ from boltons.cacheutils import cachedproperty
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.python.client import device_lib
-from tensorflow.keras.layers import Conv2D, Dense, Dropout, Flatten, Input, MaxPooling2D, Permute, RepeatVector, Reshape, TimeDistributed, Lambda, LSTM, GRU, CuDNNLSTM, Bidirectional
+from tensorflow.keras.layers import Add, Activation, BatchNormalization, Concatenate, Conv1D, Conv2D, Dense, Dropout, Flatten, Input, MaxPooling2D, Permute, RepeatVector, Reshape, TimeDistributed, Lambda, LSTM, GRU, CuDNNLSTM, CuDNNGRU, Bidirectional
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.models import Model as KerasModel
 
 from text_recognizer.models.line_model import LineModel
 from text_recognizer.networks.lenet import lenet
-from text_recognizer.networks.misc import slide_window
+from text_recognizer.networks.misc import slide_window, slide_window_flatten
 from text_recognizer.networks.ctc import ctc_decode
 
 
-def line_lstm_ctc(input_shape, output_shape, window_width=28, window_stride=14):
+def line_lstm_ctc(input_shape, output_shape, **kwargs):
     image_height, image_width = input_shape
     output_length, num_classes = output_shape
-
-    num_windows = int((image_width - window_width) / window_stride) + 1
-    if num_windows < output_length:
-        raise ValueError(f'Window width/stride need to generate at least {output_length} windows (currently {num_windows})')
 
     image_input = Input(shape=input_shape, name='image')
     y_true = Input(shape=(output_length,), name='y_true')
@@ -38,20 +34,34 @@ def line_lstm_ctc(input_shape, output_shape, window_width=28, window_stride=14):
     image_reshaped = Reshape((image_height, image_width, 1))(image_input)
     # (image_height, image_width, 1)
 
-    image_patches = Lambda(
-        slide_window,
-        arguments={'window_width': window_width, 'window_stride': window_stride}
-    )(image_reshaped)
-    # (num_windows, image_height, window_width, 1)
+    convnet_outputs = image_reshaped
+    convnet_outputs = BatchNormalization()(convnet_outputs)
+    # convnet_outputs = Dropout(0.2)(convnet_outputs)
+    convnet_outputs = Conv2D(32, kernel_size=(3, 3), activation='relu')(convnet_outputs)
+    # convnet_outputs = Dropout(0.2)(convnet_outputs)
+    convnet_outputs = BatchNormalization()(convnet_outputs)
+    convnet_outputs = Conv2D(64, (3, 3), activation='relu')(convnet_outputs)
+    # convnet_outputs = Dropout(0.2)(convnet_outputs)
+    convnet_outputs = MaxPooling2D(pool_size=(2, 2))(convnet_outputs)
+    convnet_outputs = Dropout(0.5)(convnet_outputs)
+    # convnet_outputs = MaxPooling2D(pool_size=(12, 1))(convnet_outputs)
+    convnet_outputs = Lambda(
+        slide_window_flatten,
+        arguments={'window_width': 12, 'window_stride': 1}
+    )(convnet_outputs)
+    convnet_outputs = Dense(128, activation='relu')(convnet_outputs)
+    print(convnet_outputs)
+    num_windows = 463
 
-    # Make a LeNet and get rid of the last two layers (softmax and dropout)
-    convnet = lenet((image_height, window_width, 1), (num_classes,))
-    convnet = KerasModel(inputs=convnet.inputs, outputs=convnet.layers[-2].output)
-    convnet_outputs = TimeDistributed(convnet)(image_patches)
     # (num_windows, 128)
 
-    lstm_output = lstm_fn(128, return_sequences=True)(convnet_outputs)
-    # (num_windows, 128)
+    lstm_output = Dropout(0.5)(convnet_outputs)
+    for i in range(kwargs.get('lstm_layers', 1)):
+        # lstm_output = Bidirectional(lstm_fn(256, return_sequences=True))(lstm_output)
+        # lstm_output = Dropout(0.5)(lstm_output)
+        lstm_output = BatchNormalization()(lstm_output)
+        lstm_output = Conv1D(256, 3, activation='relu', padding='SAME')(lstm_output)
+        lstm_output = Dropout(0.5)(lstm_output)
 
     softmax_output = Dense(num_classes, activation='softmax', name='softmax_output')(lstm_output)
     # (num_windows, num_classes)
@@ -77,4 +87,3 @@ def line_lstm_ctc(input_shape, output_shape, window_width=28, window_stride=14):
         outputs=[ctc_loss_output, ctc_decoded_output]
     )
     return model
-
